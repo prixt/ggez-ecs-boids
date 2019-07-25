@@ -3,6 +3,7 @@ name = "ggez-ecs-boids"
 version = "0.1.0"
 authors = ["prixt"]
 edition = "2018"
+desciption = "A simple boids simulation (flocking simulation) using specs."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
