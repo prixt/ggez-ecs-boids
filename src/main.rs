@@ -15,13 +15,19 @@ struct Game {
     updater: Dispatcher<'static, 'static>,
 }
 
+pub type DeltaTime = (f32);
+
 impl Game {
     fn new(_ctx: &mut Context) -> GameResult<Self> {
         use rand::prelude::*;
         use neighborhood::{Neighborhood, get_area};
         
         let mut world = World::new();
-        world.insert(Neighborhood::new((SCREEN_W / AREA_SIZE) as i32 , (SCREEN_H / AREA_SIZE) as i32));
+        world.insert(Neighborhood::new(
+            (SCREEN_W / AREA_SIZE).ceil() as i32 ,
+            (SCREEN_H / AREA_SIZE).ceil() as i32
+            ));
+        world.insert::<DeltaTime>(0.0);
         let mut updater = DispatcherBuilder::new()
             .with(
                 systems::VelocitySystem,
@@ -45,10 +51,10 @@ impl Game {
         for _ in 0..BOID_N {
             world.create_entity()
                 .with(
-                    Pos(Point2::new(rng.gen_range(10.0, 790.0), rng.gen_range(10.0, 590.0)))
+                    Pos(Point2::new(rng.gen_range(0.0, SCREEN_W), rng.gen_range(0.0, SCREEN_H)))
                 )
                 .with( {
-                    let angle = rng.gen::<f32>() * std::f32::consts::PI * 2.0;
+                    let angle = rng.gen::<f32>() * TAU;
                     let mag = rng.gen_range(-AREA_SIZE, AREA_SIZE);
                     Vel(Vector2::new(angle.cos() * mag, angle.sin() * mag))
                 } )
@@ -72,7 +78,10 @@ impl Game {
 }
 
 impl event::EventHandler for Game {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
+        let dt = ggez::timer::delta(ctx);
+        let dt = ggez::timer::duration_to_f64(dt) as f32;
+        self.world.insert::<DeltaTime>(dt);
         self.updater.dispatch(&self.world);
         Ok(())
     }

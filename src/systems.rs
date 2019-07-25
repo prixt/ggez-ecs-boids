@@ -5,6 +5,7 @@ use nalgebra as na;
 use crate::components::*;
 use crate::neighborhood::{get_area, Neighborhood};
 use crate::globals::*;
+use crate::DeltaTime;
 
 // type Point2 = na::Point2<f32>;
 type Vector2 = na::Vector2<f32>;
@@ -13,18 +14,19 @@ pub struct VelocitySystem;
 impl<'a> System<'a> for VelocitySystem {
 	type SystemData = (
 		Entities<'a>,
+		ReadExpect<'a, DeltaTime>,
 		ReadStorage<'a, Vel>,
 		WriteStorage<'a, Pos>,
 		WriteExpect<'a, Neighborhood>,
 	);
 
-	fn run(&mut self, (entities, velocities, mut positions, neighborhood): Self::SystemData) {
+	fn run(&mut self, (entities, dt, velocities, mut positions, neighborhood): Self::SystemData) {
 		let nh = Mutex::new(neighborhood);
 		(&entities, &velocities, &mut positions).par_join()
 			.for_each(|(ent, vel, pos)| {
 				let (prev_x, prev_y) = get_area(pos.0, AREA_SIZE, AREA_SIZE);
-				pos.0 += vel.0 / 60.0;
-				wrap_pos_within_limits(&mut pos.0, 800.0, 600.0);
+				pos.0 += vel.0 * *dt;
+				wrap_pos_within_limits(&mut pos.0, SCREEN_W, SCREEN_H);
 				let (curr_x, curr_y) = get_area(pos.0, AREA_SIZE, AREA_SIZE);
 				if prev_x != curr_x || prev_y != curr_y {
 					let mut nh = nh.lock().unwrap();
@@ -88,6 +90,7 @@ impl<'a> System<'a> for BoidSystem {
 						total_repulsion -= npos.0 - pos.0;
 					}
 				}
+				
 				acc.0 = Vector2::new(0.0, 0.0);
 				if position_count != 0 {
 					acc.0 += total_position * COHESION_MAGNITUDE / position_count as f32;
@@ -103,14 +106,15 @@ impl<'a> System<'a> for BoidSystem {
 pub struct AccelSystem;
 impl<'a> System<'a> for AccelSystem {
 	type SystemData = (
+		ReadExpect<'a, DeltaTime>,
 		WriteStorage<'a, Vel>,
 		ReadStorage<'a, Acc>,
 	);
 
-	fn run(&mut self, (mut vel, acc): Self::SystemData) {
+	fn run(&mut self, (dt, mut vel, acc): Self::SystemData) {
 		(&mut vel, &acc).par_join()
 			.for_each(|(vel, acc)| {
-				vel.0 += acc.0 / 60.0;
+				vel.0 += acc.0 * *dt;
 				if vel.0.dot(&vel.0) > SPEED_LIMIT * SPEED_LIMIT {
 					vel.0 = vel.0.normalize() * SPEED_LIMIT;
 				}
@@ -132,8 +136,8 @@ impl<'draw, 'world> System<'world> for DrawSystem<'draw> {
 
 	fn run(&mut self, (pos, vel): Self::SystemData) {
 		let mut mesh = MeshBuilder::new();
-		let rot1 = na::Rotation2::new(std::f32::consts::PI * 0.75);
-		let rot2 = na::Rotation2::new(std::f32::consts::PI * -0.75);
+		let rot1 = na::Rotation2::new(PI * 0.75);
+		let rot2 = na::Rotation2::new(PI * -0.75);
 		(&pos, &vel).join()
 			.for_each(|(pos, vel)| {
 				let unitv = vel.0.normalize() * 3.0;
