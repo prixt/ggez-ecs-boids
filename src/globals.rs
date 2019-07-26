@@ -2,7 +2,7 @@ pub const SCREEN_W: f32 = 800.0;
 pub const SCREEN_H: f32 = 600.0;
 
 pub const BOID_N: usize = 6000;
-pub const AREA_SIZE: f32 = 100.0;
+pub const AREA_SIZE: f32 = 50.0;
 
 pub const ALIGN_RANGE: f32 = 25.0;
 pub const ALIGN_MAGNITUDE: f32 = 1.0;

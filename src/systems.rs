@@ -58,17 +58,15 @@ impl<'a> System<'a> for BoidSystem {
 		use nalgebra::distance_squared;
 		(&ent, &pos_storage, &mut acc_storage).par_join()
 			.for_each(|(ent, pos, acc)| {
-				let (area_x, area_y) = get_area(pos.0, AREA_SIZE, AREA_SIZE);
+				let v = Vector2::new(COHESION_RANGE, COHESION_RANGE);
+				let (tl_x, tl_y) = get_area(pos.0 - v, AREA_SIZE, AREA_SIZE);
+				let (br_x, br_y) = get_area(pos.0 + v, AREA_SIZE, AREA_SIZE);
 				let mut bitset = BitSet::new();
-				bitset |= nh.get(area_x-1, area_y-1);
-				bitset |= nh.get(area_x-1, area_y  );
-				bitset |= nh.get(area_x-1, area_y+1);
-				bitset |= nh.get(area_x  , area_y-1);
-				bitset |= nh.get(area_x  , area_y  );
-				bitset |= nh.get(area_x  , area_y+1);
-				bitset |= nh.get(area_x+1, area_y-1);
-				bitset |= nh.get(area_x+1, area_y  );
-				bitset |= nh.get(area_x+1, area_y+1);
+				for dy in tl_y ..= br_y {
+					for dx in tl_x ..= br_x {
+						bitset |= nh.get(dx, dy);
+					}
+				}
 				bitset.remove(ent.id());
 
 				let mut total_position = Vector2::new(0.0,0.0);
